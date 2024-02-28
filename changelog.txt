@@ -1,0 +1,22 @@
+V1.03
+	Minor changes to DMARC log collection to account for no logs found
+
+V1.02
+	Replaced maskpass password function with pyinputplus, removed maskpass module
+	Replaced username with pyinputplus function
+
+V1.01
+	Added Try statements to compressed extraction of .gz and .zip files to handle corrupted archives
+		Corrupted files and unknown file types will remain in temp folder for manual investigation/extraction
+	Improved exception handling for try statements
+	Minor cleanup of variable names
+
+V1.0
+	Feature complete
+	Added extraction of .gz files that retains timestamp if present
+
+V0.95
+	Added extraction of .zip files that retains timestamp if present
+
+V0.9
+	Spam check and mailbox level features complete

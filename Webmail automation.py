@@ -1,22 +1,23 @@
 ###################################################################
-# Webmail Automation Script V1.0
+# Webmail Automation Script V1.03
 # Written by Kevin D. Reid
-# Requirements: maskpass, pyinputplus, selenium
+# Requirements: pyinputplus, selenium
 ###################################################################
 
-import sys, os, time, maskpass, pyinputplus, zipfile, gzip, shutil
+import sys, os, time, pyinputplus, zipfile, gzip, shutil
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException, WebDriverException
 
 # Select domain target
-domain = pyinputplus.inputMenu(['<DOMAIN1>', 'DOMAIN2'], numbered=True, prompt='Please select a domain:\n')
-if domain == '<DOMAIN1>':
-    webmail_url = '<PORTAL_URL1>'
+domain = pyinputplus.inputMenu(['<DOMAIN_1>', '<DOMAIN_2'], numbered=True, prompt='Please select a domain:\n')
+if domain == '<DOMAIN_1>':
+    webmail_url = '<PORTAL_URL_1>'
 else:
-    webmail_url = '<PORTAL_URL2>'
+    webmail_url = '<PORTAL_URL_2>'
 
 # Select tasks to carry out
 spam_check = pyinputplus.inputYesNo(prompt='Check for spam? ')
@@ -26,9 +27,8 @@ mailbox_limit_check = pyinputplus.inputYesNo(prompt='Check for mailboxes >75% fu
 DMARC_log_collect = pyinputplus.inputYesNo(prompt='Collect DMARC logs? ')
 
 # Enter username and hidden password
-print('Enter Email Address: ', end='')
-username = input()
-password = maskpass.askpass()
+username = pyinputplus.inputEmail(prompt='Enter Email Address: ')
+password = pyinputplus.inputPassword(prompt='Enter Password: ')
 
 # Define browser settings
 options = webdriver.ChromeOptions()
@@ -39,7 +39,7 @@ prefs = {
 }
 options.add_experimental_option('prefs', prefs)
 driver = webdriver.Chrome(options)
-wait = WebDriverWait(driver, timeout=15)
+wait = WebDriverWait(driver, timeout=10)
 
 # Login to portal, navigate to email address list
 driver.get(webmail_url + 'portal/')
@@ -57,7 +57,11 @@ def mailbox_inspect(row):
     row.find_element(By.LINK_TEXT, 'Webmail').click()
     wait.until(EC.number_of_windows_to_be(2))
     driver.switch_to.window(driver.window_handles[1])
-    wait.until(EC.presence_of_element_located((By.XPATH, '//a[@class="ng-isolate-scope"]')))
+    # Exceptions happen often here no matter what page element is selected, if that happens the wait will be executed again
+    try:
+        wait.until(EC.presence_of_element_located((By.XPATH, '//a[@class="ng-isolate-scope"]')))
+    except WebDriverException:
+        wait.until(EC.presence_of_element_located((By.XPATH, '//a[@class="ng-isolate-scope"]')))
 
 # Define exit mailbox
 def mailbox_close():
@@ -82,9 +86,9 @@ while True:
                 spam_file.write(driver.find_element(By.XPATH, '//div[@id="panelRealmCore"]/h2/a/div').text + ': ' + spam_level + '\n')
                 spam_file.close()
                 mailbox_close()
-            except:
+            except NoSuchElementException:
                 mailbox_close()
-        # Print mailbox and percentage of limit to console
+        # Print mailbox and percentage of limit to console if over 75%
         if mailbox_limit_check == 'yes':
             percentage = str(row.find_element(By.TAG_NAME, 'span').text)[:-1]
             if int(percentage) >= 75:
@@ -100,54 +104,66 @@ while True:
                     wait.until(EC.presence_of_element_located((By.XPATH, '//div[@class="divth fcol-spacer cBox"]/span')))
                     driver.find_element(By.XPATH, '//span[@aria-label="Select All"]').click()
                     wait.until(EC.presence_of_element_located((By.ID, 'readingPaneLabel')))
-                    driver.find_element(By.XPATH, '//a[@title="Download"]').click()
+                    try:
+                        driver.find_element(By.XPATH, '//a[@title="Download"]').click()
+                    except ElementClickInterceptedException:
+                        print('No DMARC logs found.')
+                        mailbox_close()
+                        break
                     try:
                         driver.find_element(By.XPATH, '//button[@aria-label="Next"]').click()
-                    except:
-                        break
-                # Go back to Inbox folder and move messages to Aggregate Reports
-                driver.find_element(By.XPATH, '//ul[@id="corefolders"]/li[1]').click()
-                wait.until(EC.presence_of_element_located((By.ID, 'togglePersonalCore')))
-                while True:
-                    driver.find_element(By.XPATH, '//span[@aria-label="Select All"]').click()
-                    driver.find_element(By.XPATH, '//button[@aria-label="Move to folder"]').click()
-                    driver.find_element(By.XPATH, '//span[@title="Aggregate Reports"]').click()
-                    try:
-                        driver.find_element(By.XPATH, '//button[@aria-label="Next"]').click()
-                    except:
-                        break
-                mailbox_close()
+                    except NoSuchElementException:
+                        # Go back to Inbox folder and move messages to Aggregate Reports
+                        driver.find_element(By.XPATH, '//ul[@id="corefolders"]/li[1]').click()
+                        wait.until(EC.presence_of_element_located((By.ID, 'togglePersonalCore')))
+                        while True:
+                            driver.find_element(By.XPATH, '//span[@aria-label="Select All"]').click()
+                            driver.find_element(By.XPATH, '//button[@aria-label="Move to folder"]').click()
+                            driver.find_element(By.XPATH, '//span[@title="Aggregate Reports"]').click()
+                            try:
+                                driver.find_element(By.XPATH, '//button[@aria-label="Next"]').click()
+                            except NoSuchElementException:
+                                mailbox_close()
+                    break
                 # Define folder locations, extract downloaded archives in temp folder
                 temp_folder = Path.cwd() / Path('temp')
                 log_folder = Path.cwd() / Path('DMARC logs', domain)
                 for attachment in temp_folder.glob('attachment*'):
-                    with zipfile.ZipFile(attachment) as zip_ref:
-                        zip_ref.extractall(temp_folder)
+                    shutil.unpack_archive(attachment, 'temp')
                     os.unlink(attachment)
                 # Extract extracted archives from downloads to log folder
+                # If extracted files are an unrecognized format or unable to extract, leave in temp folder for manual inspection
                 for file in os.listdir(temp_folder):
                     # .zip file extraction while maintaining file modified time if already present
                     if file.endswith('.zip'):
-                        with zipfile.ZipFile(os.path.join(temp_folder, file), 'r') as f_in:
-                            for fileinfo in f_in.infolist():
-                                name, date_time = fileinfo.filename, fileinfo.date_time
-                                name = os.path.join(log_folder, name)
-                                with open(name, 'wb') as f_out:
-                                    f_out.write(f_in.open(fileinfo).read())
-                                epoch_time = time.mktime(date_time + (0, 0, -1))
-                                os.utime(name, (epoch_time, epoch_time))
-                        os.unlink(os.path.join(temp_folder, file))
+                        try:
+                            with zipfile.ZipFile(os.path.join(temp_folder, file), 'r') as f_in:
+                                for fileinfo in f_in.infolist():
+                                    name, date_time = fileinfo.filename, fileinfo.date_time
+                                    name = os.path.join(log_folder, name)
+                                    with open(name, 'wb') as f_out:
+                                        f_out.write(f_in.open(fileinfo).read())
+                                    epoch_time = time.mktime(date_time + (0, 0, -1))
+                                    os.utime(name, (epoch_time, epoch_time))
+                            os.unlink(os.path.join(temp_folder, file))
+                        except zipfile.BadZipFile:
+                            continue
                     # .gz file extraction while maintaining file modified time if already present
-                    if file.endswith('.gz'):
-                        with gzip.open(os.path.join(temp_folder, file), 'rb') as f_in:
-                            file_xml = file[:-len('.gz')]
-                            with open(os.path.join(log_folder, file_xml), 'wb') as f_out:
-                                shutil.copyfileobj(f_in, f_out)
-                            f_in.peek(100)
-                            epoch_time = float(f_in.mtime)
-                            if epoch_time > 0:
-                                os.utime(os.path.join(log_folder, file_xml), (epoch_time, epoch_time))
-                        os.unlink(os.path.join(temp_folder, file))
+                    elif file.endswith('.gz'):
+                        try:
+                            with gzip.open(os.path.join(temp_folder, file), 'rb') as f_in:
+                                file_xml = file[:-len('.gz')]
+                                with open(os.path.join(log_folder, file_xml), 'wb') as f_out:
+                                    shutil.copyfileobj(f_in, f_out)
+                                f_in.peek(100)
+                                epoch_time = float(f_in.mtime)
+                                if epoch_time > 0:
+                                    os.utime(os.path.join(log_folder, file_xml), (epoch_time, epoch_time))
+                            os.unlink(os.path.join(temp_folder, file))
+                        except gzip.BadGzipFile:
+                            continue
+                    else:
+                        continue
                         
                 # Remove duplicate log files and files older than 90 days
                 for file in log_folder.glob('*'):
@@ -162,5 +178,5 @@ while True:
     try:
         driver.find_element(By.XPATH, '//li[@id="email_list_container_next"]/a').click()
         wait.until(EC.invisibility_of_element((By.XPATH, '//div[@class="app_spinner"]')))
-    except:
+    except ElementClickInterceptedException:
         exit_func()
