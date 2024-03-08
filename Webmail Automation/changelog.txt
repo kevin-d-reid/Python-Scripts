@@ -1,3 +1,14 @@
+V1.10
+	Added skip list to skip over utility accounts
+		Execution time further reduced by ~30%
+	Added print statements to console to more accurately track execution time
+	Split tasks into "All mailboxes" and "Select mailboxes" for future tasks
+
+V1.04
+	Added missing break statement for DMARC log collector, fixed processing of mailboxes after log collection
+	Added additional wait check for moving processed files to mailbox folder in DMARC log collector
+	Fixed DMARC log collection additional task check logic
+
 V1.03
 	Minor changes to DMARC log collection to account for no logs found
 
