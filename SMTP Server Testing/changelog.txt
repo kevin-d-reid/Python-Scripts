@@ -1,0 +1,13 @@
+V1.03
+	Increased verbosity in message body for testing of "Send As" feature with Exchange Online
+
+V1.02
+	Moved optional headers to separate section that can be skipped
+	Set "Reply-To:" to default to email "From:" when not specified
+
+V1.01
+	Adjusted Reply-To header to default to email "From:", prevents empty "To:" field on reply
+		Will use default after 3 failed attempts or 10 second timeout
+
+V1.0
+	Initial release

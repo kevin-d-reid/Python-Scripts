@@ -1,5 +1,5 @@
 ###################################################################
-# SMTP server tester v1.0
+# SMTP server test v1.03
 # Written by Kevin D. Reid
 # Requirements: pyinputplus
 ###################################################################
@@ -34,13 +34,21 @@ envelope_from = pyinputplus.inputEmail(prompt='Enter address for envelope "MAIL 
 envelope_to = pyinputplus.inputEmail(prompt='Enter address for envelope "RCPT TO:" header: ')
 email_from = pyinputplus.inputEmail(prompt='Enter address for email "From:" header: ')
 email_to = pyinputplus.inputEmail(prompt='Enter address for email "To:" header: ')
-email_replyto = pyinputplus.inputEmail(prompt='Enter address for email "Reply-To:" header (optional): ', blank=True)
-email_sender = pyinputplus.inputEmail(prompt='Enter address for email "Sender:" header (optional): ', blank=True)
+optional_headers = pyinputplus.inputYesNo(prompt='Set optional headers?: ')
+if optional_headers == 'yes':
+    email_replyto = pyinputplus.inputEmail(prompt='Enter address for email "Reply-To:" header: ', blank=True)
+    email_sender = pyinputplus.inputEmail(prompt='Enter address for email "Sender:" header: ', blank=True)
+else:
+    email_replyto = email_from
+    email_sender = ''
 
 # Email composition, sending, and exiting of script
 date = datetime.now().strftime( "%d/%m/%Y %H:%M" )
 message_subject = 'Test message'
-message_text = 'Test message sent via Python testing script.'
+message_text = '''Test message sent via Python testing script.
+    SMTP username: %s
+    MAIL FROM: %s
+    From: %s''' % (SMTP_username, envelope_from, email_from)
 message = 'From: %s\nReply-To: %s\nSender: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s' % ( email_from, email_replyto, email_sender, email_to, message_subject, date, message_text)
 try:
     server.sendmail(envelope_from, envelope_to, message)
