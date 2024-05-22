@@ -1,4 +1,4 @@
-# Python scripts
+# Scripting sample
 
 Small sample of automation scripts I wrote, with identifying data removed.
 
