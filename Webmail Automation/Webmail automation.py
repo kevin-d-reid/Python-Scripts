@@ -1,23 +1,25 @@
 ###################################################################
-# Webmail Automation Script V1.10
+# Webmail Automation Script V1.2.1
 # Written by Kevin D. Reid
-# Requirements: pyinputplus, selenium
+# Requirements: pyinputplus, selenium, webdriver-manager
 ###################################################################
 
 import sys, os, time, pyinputplus, zipfile, gzip, shutil
 from pathlib import Path
 from selenium import webdriver
+from selenium.webdriver.edge.service import Service as EdgeService
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException, WebDriverException
+from selenium.common.exceptions import *
 
 # Select domain target
-domain = pyinputplus.inputMenu(['<DOMAIN1>', '<DOMAIN2>'], numbered=True, prompt='Please select a domain:\n')
-if domain == '<DOMAIN1>':
-    webmail_url = '<URL1>'
+domain = pyinputplus.inputMenu(['DOMAIN1', 'DOMAIN2'], numbered=True, prompt='Please select a domain:\n')
+if domain == 'DOMAIN1':
+    webmail_url = 'DOMAIN1_URL'
 else:
-    webmail_url = '<URL2>'
+    webmail_url = 'DOMAIN2_URL'
 
 # Tasks to carry out - All mailboxes
 spam_check = pyinputplus.inputYesNo(prompt='Check for spam? ')
@@ -38,14 +40,16 @@ password = pyinputplus.inputPassword(prompt='Enter Password: ')
 print('Execution started at ' + time.strftime('%H-%M-%S'))
 
 # Define browser settings
-options = webdriver.ChromeOptions()
+options = webdriver.EdgeOptions()
 prefs = {
     'download.default_directory' : str(Path.cwd()) + "\\temp",
     'download.prompt_for_download' : False,
     'download.directory_upgrade' : True
 }
 options.add_experimental_option('prefs', prefs)
-driver = webdriver.Chrome(options)
+options.add_experimental_option('excludeSwitches', ['enable-logging'])
+options.add_argument('--log-level=3')
+driver = webdriver.Edge(options, service=EdgeService(EdgeChromiumDriverManager().install()))
 wait = WebDriverWait(driver, timeout=15)
 
 # Login to portal, navigate to email address list
@@ -125,9 +129,10 @@ while True:
                         print('No DMARC logs found.')
                         mailbox_close()
                         break
+
                     try:
                         driver.find_element(By.XPATH, '//button[@aria-label="Next"]').click()
-                    except NoSuchElementException:
+                    except ElementNotInteractableException:
                         # Go back to Inbox folder and move messages to Aggregate Reports
                         driver.find_element(By.XPATH, '//ul[@id="corefolders"]/li[1]').click()
                         wait.until(EC.presence_of_element_located((By.ID, 'togglePersonalCore')))

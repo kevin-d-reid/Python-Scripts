@@ -12,4 +12,4 @@ Uses PyInputPlus for input validation
 
 Automated administration tasks with an externally hosted mail server fronted with a webmail interface. No API available and bulk tasks were severly limited. Reduced twice-daily manual tasks from 45-50 minutes down to a 15 minute script execution and 5 minute manual check after.
 
-Uses Selenium for browser interaction and PyInputPlus for input validation
+Uses Selenium for browser interaction, webdriver-manager to automate updating of webdriver version, and PyInputPlus for input validation

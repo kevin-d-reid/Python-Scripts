@@ -1,22 +1,36 @@
-V1.10
+V1.2.1
+	Removed timeout exception added in V1.1.1, no longer needed as script is more stable with MS Edge as webdriver
+	
+
+V1.2
+	Switch to Microsoft Edge for webdriver
+	Add webdriver-manager library to automate updating of webdriver version
+	Added requirements.txt with required libraries
+	Hid DevTools console statement and Microsoft Edge errors associated with automation
+
+V1.1.1
+	Added timeout exception to spam check function, skips mailbox and prints name to console for manual review
+		Stability of webmail interface continues to degrade, this keeps the script going
+
+V1.1
 	Added skip list to skip over utility accounts
 		Execution time further reduced by ~30%
 	Added print statements to console to more accurately track execution time
 	Split tasks into "All mailboxes" and "Select mailboxes" for future tasks
 
-V1.04
+V1.0.4
 	Added missing break statement for DMARC log collector, fixed processing of mailboxes after log collection
 	Added additional wait check for moving processed files to mailbox folder in DMARC log collector
 	Fixed DMARC log collection additional task check logic
 
-V1.03
+V1.0.3
 	Minor changes to DMARC log collection to account for no logs found
 
-V1.02
+V1.0.2
 	Replaced maskpass password function with pyinputplus, removed maskpass module
 	Replaced username with pyinputplus function
 
-V1.01
+V1.0.1
 	Added Try statements to compressed extraction of .gz and .zip files to handle corrupted archives
 		Corrupted files and unknown file types will remain in temp folder for manual investigation/extraction
 	Improved exception handling for try statements
